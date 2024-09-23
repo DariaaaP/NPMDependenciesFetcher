@@ -13,4 +13,6 @@ Rails.application.routes.draw do
   # root "posts#index"
 
   root "npm_deps#index"
+
+  post "/npm_deps/fetch", to: "npm_deps#fetch"
 end
