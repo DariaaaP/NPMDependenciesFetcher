@@ -2,25 +2,57 @@
 import { ref } from "vue";
 
 const message = ref("");
-const data = ref(null);
 const error = ref(null);
 const loading = ref(false);
+const deps = ref([]);
+const items = ref([]);
 
-const getDeps = async () => {
+async function fetchData(url, valueName, depth) {
     loading.value = true;
-    await fetch("http://localhost:3000/npm_deps/fetch", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json;charset=utf-8",
-        },
-        body: JSON.stringify({ name: message.value }),
-    })
-        .then(response => response.json())
-        .then(
-            json => ((data.value = json.dependencies), (loading.value = false))
-        )
-        .catch(err => (error.value = err));
-};
+    error.value = null;
+    items.value = [];
+    try {
+        items.value = await fetchRecursive(url, valueName, depth);
+    } catch (err) {
+        error.value = err.message;
+    } finally {
+        loading.value = false;
+    }
+}
+async function fetchRecursive(url, valueName, currentDepth) {
+    if (currentDepth) {
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json;charset=utf-8",
+            },
+            body: JSON.stringify({ name: valueName }),
+        });
+
+        if (!response.ok) {
+            throw new Error("Ошибка сети");
+        }
+        const data = await response.json();
+        const results = [];
+
+        if (data.dependencies) {
+            for (const [key, value] of Object.entries(data.dependencies)) {
+                if (!key.includes("@")) {
+                    const item = { name: key };
+
+                    item.children = await fetchRecursive(
+                        url,
+                        key,
+                        currentDepth - 1
+                    );
+
+                    results.push(item);
+                }
+            }
+        }
+        return results;
+    }
+}
 </script>
 <template>
     <div>
@@ -30,19 +62,36 @@ const getDeps = async () => {
             <p>https://registry.npmjs.org/{{ message }}/latest</p>
             <input v-model="message" placeholder="npm package name" />
 
-            <button @click="getDeps">Submit</button>
+            <button
+                @click="
+                    () =>
+                        fetchData(
+                            'http://localhost:3000/npm_deps/fetch',
+                            message,
+                            2
+                        )
+                "
+            >
+                Submit
+            </button>
         </div>
         <div v-if="error">Возникла ошибка: {{ error.message }}</div>
-        <div v-else-if="data">
-            <h3>Dependencies:</h3>
-            <ul>
-                <li v-for="(value, key) in data">
-                    {{ key }}
-                </li>
-            </ul>
-        </div>
-        <div v-else-if="loading">Загрузка...</div>
-        <div v-else></div>
+
+        <ul v-if="!loading && !error">
+            <li v-for="(item, index) in items" :key="index">
+                <span>{{ item.name }}</span>
+                <ul v-if="item.children && item.children.length">
+                    <li
+                        v-for="(child, childIndex) in item.children"
+                        :key="childIndex"
+                    >
+                        <span>{{ child.name }}</span>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+
+        <div v-if="loading">Загрузка...</div>
     </div>
 </template>
 <style scoped>
