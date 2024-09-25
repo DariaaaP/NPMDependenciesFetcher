@@ -1,3 +1,21 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.marker-circle {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    margin-top: 5px;
+
+    vertical-align: middle;
+    border: 1px solid black;
+    border-radius: 50%;
+}
+
+button:disabled {
+    color: darkgrey;
+    background-color: rgb(141, 141, 141);
+    pointer-events: none;
+    opacity: 50;
+}
