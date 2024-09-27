@@ -3,6 +3,6 @@ class DepsCollectorController < ApplicationController
   def fetch_deps_all
     package_name = params[:name]
     @dependencies = FetchDependenciesAll.fetch_dependencies(package_name)
-    render json: @dependencies, :status => :ok
+    render json: @dependencies, status: :ok
   end
 end
