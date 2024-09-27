@@ -29,7 +29,7 @@ console.log(
 
 // Example: Import a stylesheet in app/frontend/index.css
 // import '~/index.css'
-
+import "../styles/style.css";
 import { createApp } from "vue";
 import App from "../components/App.vue";
 const app = createApp(App).mount("#app");

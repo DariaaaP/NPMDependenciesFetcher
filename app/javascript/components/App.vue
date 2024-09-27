@@ -1,123 +1,146 @@
 <script setup>
-import { ref } from "vue";
-
+import { ref, computed } from "vue";
+import Spinner from "../components/Spinner.vue";
 const message = ref("");
+const data = ref(null);
 const error = ref(null);
 const loading = ref(false);
-const deps = ref([]);
-const items = ref([]);
+const hasError = ref(null);
+const errorMessage = ref("");
 
-async function fetchData(url, valueName, depth) {
+const inputClass = computed(() => {
+    return hasError.value ? "border-red-500 animate-shake" : "border-gray-300";
+});
+
+const updateDataValue = computed(() => {
+    return message.value === "" ? (data.value = null) : "";
+});
+
+const handleSubmit = () => {
+    if (!message.value.trim()) {
+        hasError.value = true;
+        errorMessage.value = "Поле не должно быть пустым";
+    } else {
+        getDeps();
+        hasError.value = false;
+        errorMessage.value = "";
+    }
+    if (hasError.value) {
+        setTimeout(() => {
+            hasError.value = false;
+        }, 2000);
+    }
+};
+const getDeps = async () => {
     loading.value = true;
-    error.value = null;
-    items.value = [];
-    try {
-        items.value = await fetchRecursive(url, valueName, depth);
-    } catch (err) {
-        error.value = err.message;
-    } finally {
-        loading.value = false;
-    }
-}
-async function fetchRecursive(url, valueName, currentDepth) {
-    if (currentDepth) {
-        const response = await fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json;charset=utf-8",
-            },
-            body: JSON.stringify({ name: valueName }),
-        });
+    data.value = null;
 
-        if (!response.ok) {
-            throw new Error("Ошибка сети");
-        }
-        const data = await response.json();
-        const results = [];
-
-        if (data.dependencies) {
-            for (const [key, value] of Object.entries(data.dependencies)) {
-                if (!key.includes("@")) {
-                    const item = { name: key };
-
-                    item.children = await fetchRecursive(
-                        url,
-                        key,
-                        currentDepth - 1
-                    );
-
-                    results.push(item);
-                }
-            }
-        }
-        return results;
-    }
-}
+    await fetch("deps_collector/fetch_deps_all", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json;charset=utf-8",
+        },
+        body: JSON.stringify({ name: message.value }),
+    })
+        .then(response => response.json())
+        .then(json => ((data.value = json), (loading.value = false)))
+        .catch(err => (error.value = err));
+};
 </script>
+
 <template>
-    <div>
-        <h1>NPM Dependencies Fetcher</h1>
-        <div class="form">
-            <p>https://registry.npmjs.org/webpack/latest</p>
-            <p>https://registry.npmjs.org/{{ message }}/latest</p>
-            <input v-model="message" placeholder="npm package name" />
-
-            <button
-                @click="
-                    () =>
-                        fetchData(
-                            'http://localhost:3000/npm_deps/fetch',
-                            message,
-                            2
-                        )
-                "
-            >
-                Submit
-            </button>
+    <div class="flex flex-col items-center justify-start min-h-screen mb-10">
+        <div
+            class="bg-opacity-30 backdrop-blur-md bg-gradient-to-br from-gray-200 to-blue-300 border border-gray-300 p-8 rounded-lg shadow-lg w-full max-w-lg mt-20"
+        >
+            <h2 class="text-2xl font-bold mb-6 text-center">
+                NPM Dependencies Fetcher
+            </h2>
+            <div class="relative mb-10">
+                <input
+                    type="text"
+                    @input="updateDataValue"
+                    :class="inputClass"
+                    v-model="message"
+                    placeholder="npm package name"
+                    class="border border-gray-300 rounded-lg p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <transition name="fade">
+                    <p v-if="hasError" class="absolute text-red-500 top-full">
+                        {{ errorMessage }}
+                    </p>
+                </transition>
+            </div>
+            <div class="flex justify-end">
+                <button
+                    class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600"
+                    @click="handleSubmit"
+                    :disabled="loading ? true : false"
+                >
+                    Получить
+                </button>
+            </div>
         </div>
-        <div v-if="error">Возникла ошибка: {{ error.message }}</div>
-
-        <ul v-if="!loading && !error">
-            <li v-for="(item, index) in items" :key="index">
-                <span>{{ item.name }}</span>
-                <ul v-if="item.children && item.children.length">
-                    <li
-                        v-for="(child, childIndex) in item.children"
-                        :key="childIndex"
-                    >
-                        <span>{{ child.name }}</span>
+        <div class="mt-8 w-full max-w-lg">
+            <div v-if="error">Возникла ошибка: {{ error.message }}</div>
+            <div v-else-if="message.length === 0"></div>
+            <div v-else-if="data">
+                <div
+                    v-if="data.length === 0"
+                    class="flex items-center justify-center h-20 bg-gradient-to-r from-orange-200 to-yellow-200 opacity-75 rounded-lg shadow-md"
+                >
+                    <h3 class="text-2xl font-semibold text-center mb-2">
+                        Зависимостей нет
+                    </h3>
+                </div>
+                <div
+                    v-else="data.length > 0"
+                    class="flex items-center justify-center h-20 bg-gradient-to-br from-blue-200 to-blue-400 rounded-lg shadow-md mb-6 mt-3"
+                >
+                    <h3 class="text-2xl font-semibold text-center">
+                        Зависимости
+                    </h3>
+                </div>
+                <ul
+                    class="bg-opacity-30 backdrop-blur-md bg-gradient-to-br from-green-300 to-green-200 bg-opacity-75 p-4 rounded-lg shadow-md list-disc list-inside mb-3"
+                    v-for="package_name in data"
+                >
+                    <li>
+                        {{ package_name }}
                     </li>
                 </ul>
-            </li>
-        </ul>
-
-        <div v-if="loading">Загрузка...</div>
+            </div>
+            <Spinner v-else-if="loading" class="text-center"></Spinner>
+        </div>
     </div>
 </template>
-<style scoped>
-div {
-    width: 80%;
-    display: flex;
-    flex-direction: column;
-    margin: 0 auto;
+
+<style>
+@keyframes shake {
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(-5px);
+    }
+    50% {
+        transform: translateX(5px);
+    }
+    75% {
+        transform: translateX(-5px);
+    }
 }
-.form {
-    width: 100%;
+
+.animate-shake {
+    animation: shake 0.5s ease forwards;
 }
-button {
-    margin: 10px;
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.5s;
 }
-h1 {
-    text-align: center;
-}
-label {
-    display: block;
-    width: 80px;
-    padding: 5px;
-}
-label:hover {
-    cursor: pointer;
-    background-color: rgb(211, 244, 211);
-    border-radius: 5px;
+.fade-enter,
+.fade-leave-to {
+    opacity: 0;
 }
 </style>

@@ -12,7 +12,7 @@ Rails.application.routes.draw do
   # Defines the root path route ("/")
   # root "posts#index"
 
-  root "npm_deps#index"
+  root "deps_collector#index"
 
-  post "/npm_deps/fetch", to: "npm_deps#fetch"
+  post "/deps_collector/fetch_deps_all", to: "deps_collector#fetch_deps_all"
 end
