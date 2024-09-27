@@ -17,14 +17,9 @@ const updateDataValue = computed(() => {
 });
 
 const handleSubmit = () => {
-    const englishPattern = /^[A-Za-z\s]+$/;
-
     if (!message.value.trim()) {
         hasError.value = true;
         errorMessage.value = "Поле не должно быть пустым";
-    } else if (!englishPattern.test(message.value)) {
-        hasError.value = true;
-        errorMessage.value = "Пожалуйста, вводите только английские слова";
     } else {
         getDeps();
         hasError.value = false;
@@ -40,7 +35,7 @@ const getDeps = async () => {
     loading.value = true;
     data.value = null;
 
-    await fetch("http://localhost:3000/deps_collector/fetch_deps_all", {
+    await fetch("deps_collector/fetch_deps_all", {
         method: "POST",
         headers: {
             "Content-Type": "application/json;charset=utf-8",
