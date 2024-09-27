@@ -108,19 +108,10 @@ const getDeps = async () => {
                 </div>
                 <ul
                     class="bg-opacity-30 backdrop-blur-md bg-gradient-to-br from-green-300 to-green-200 bg-opacity-75 p-4 rounded-lg shadow-md list-disc list-inside mb-3"
-                    v-for="packages_name in data"
+                    v-for="package_name in data"
                 >
-                    <li v-for="(key, value) in packages_name">
-                        <span>{{ value }}</span>
-                        <ul
-                            class="list-inside ml-6"
-                            v-for="sub_packages_name in key"
-                        >
-                            <li v-for="(k_sub, v_sub) in sub_packages_name">
-                                <span class="mr-2 marker-circle"></span
-                                >{{ v_sub }}
-                            </li>
-                        </ul>
+                    <li>
+                        {{ package_name }}
                     </li>
                 </ul>
             </div>
